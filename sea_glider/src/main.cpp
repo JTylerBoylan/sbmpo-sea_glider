@@ -1,12 +1,12 @@
 #include <sbmpo/sbmpo.hpp>
-#include <my_project/MyCustomModel.hpp>
+#include <sea_glider/SeaGliderModel.hpp>
 #include <iostream>
 
-using namespace my_namespace;
+using namespace sea_glider;
 
 int main(int argc, char ** argv) {
 
-  MyCustomModel model;
+  SeaGliderModel model;
 
   sbmpo::SBMPOParameters params;
   /* Add in parameters here */

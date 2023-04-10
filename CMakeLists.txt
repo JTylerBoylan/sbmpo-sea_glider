@@ -4,7 +4,7 @@ if(NOT CMAKE_CXX_COMPILER)
     set(CMAKE_CXX_COMPILER "/usr/bin/gcc")
 endif()
 
-project(sbmpo_getting_started)
+project(sbmpo_sea_glider)
 
 if (NOT CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 14)
@@ -20,4 +20,4 @@ endif()
 
 # Add subdirectories for each project
 add_subdirectory(sbmpo)
-add_subdirectory(my_project)
+add_subdirectory(sea_glider)

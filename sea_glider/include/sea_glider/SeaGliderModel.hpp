@@ -1,13 +1,13 @@
-#ifndef MY_CUSTOM_MODEL_HPP_
-#define MY_CUSTOM_MODEL_HPP_
+#ifndef SBMPO_SEA_GLIDER_HPP_
+#define SBMPO_SEA_GLIDER_HPP_
 
 #include <sbmpo/model.hpp>
 
-namespace my_namespace {
+namespace sea_glider {
 
 using namespace sbmpo;
 
-class MyCustomModel : public Model {
+class SeaGliderModel : public Model {
 
     public:
 
@@ -18,7 +18,7 @@ class MyCustomModel : public Model {
     enum Controls {dSGdt};
 
     // Constructor
-    MyCustomModel() {
+    SeaGliderModel() {
 
     }
 
@@ -41,9 +41,9 @@ class MyCustomModel : public Model {
 
         // Maximize time at desired depth
 
-        float diffY = state[Y] - desired_depth_;
+        float diffY = std::abs(state[Y] - desired_depth_);
 
-        return cost_of_diffY_(diffY);
+        return diffY * time_span;
     }
 
     // Get the heuristic of a state
@@ -66,8 +66,11 @@ class MyCustomModel : public Model {
         if (state[SoC] < min_energy_)
             return false;
 
-        // Maximum depth
-        // Minimum depth
+        if (state[Y] < min_depth_)
+            return false;
+        
+        if (state[Y] > max_depth_)
+            return false;
 
 
         return true;
@@ -85,7 +88,7 @@ class MyCustomModel : public Model {
     }
 
     // Deconstructor
-    virtual ~MyCustomModel() {}
+    virtual ~SeaGliderModel() {}
 
     protected:
 
@@ -99,6 +102,8 @@ class MyCustomModel : public Model {
     float resurface_time_;
     float surface_threshold_;
     float min_energy_;
+    float min_depth_;
+    float max_depth_;
 
 
     float power_output_(const float pcm_temp, const float depth) {
@@ -116,11 +121,6 @@ class MyCustomModel : public Model {
 
         // Water temp
 
-        return 0.0f;
-    }
-
-    float cost_of_diffY_(float diffY) {
-        //TODO
         return 0.0f;
     }
 
