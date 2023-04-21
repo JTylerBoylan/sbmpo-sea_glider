@@ -1,43 +1,29 @@
-#include <sbmpo/sbmpo.hpp>
 #include <sea_glider/SeaGliderModel.hpp>
-#include <iostream>
+#include <sbmpo_benchmarking/benchmark.hpp>
 
+using namespace sbmpo;
+using namespace sbmpo_benchmarking;
 using namespace sea_glider;
 
-int main(int argc, char ** argv) {
+int main (int argc, char ** argv) {
 
-  SeaGliderModel model;
+    // Path to csv workspace
+    std::string csv_folder;
 
-  sbmpo::SBMPOParameters params;
-  /* Add in parameters here */
-  
-  sbmpo::SBMPO planner(model, params);
-  planner.run();
-  
-  std::cout << "---- Planner Results ----" << std::endl;
-  std::cout << "Iterations: " << planner.iterations() << std::endl;
-  std::cout << "Exit code: " << planner.exit_code() << std::endl;
-  std::cout << "Computation Time: " << planner.time_us() << "us" << std::endl;
-  std::cout << "Path cost: " << planner.cost() << std::endl;
-  std::cout << "Number of nodes: " << planner.size() << std::endl;
-  
-  std::cout << "-- State Path --" << std::endl;
-  for (sbmpo::State state : planner.state_path()) {
-    std::cout << "  - [ ";
-    for (float s : state) {
-      std::cout << s << " ";
+    // Check arguments
+    if (argc > 1) {
+        csv_folder = argv[1];
+    } else {
+        printf("\nMissing CSV folder path.\n");
+        return 0;
     }
-    std::cout << "]" << std::endl;
-  }
-  
-  std::cout << "-- Control Path --" << std::endl;
-  for (sbmpo::Control control : planner.control_path()) {
-    std::cout << "  - [ ";
-    for (float c : control) {
-      std::cout << c << " ";
-    }
-    std::cout << "]" << std::endl;
-  }
-  
-  return 0;
+
+    // Create new benchmark
+    Benchmark<SeaGliderModel> benchmarker(csv_folder);
+
+    // Run benchmark on the model (saves to csv folder)
+    benchmarker.benchmark();
+
+    return 0;
+
 }

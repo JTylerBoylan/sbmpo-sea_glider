@@ -25,13 +25,15 @@ class SeaGliderModel : public Model {
         rotational_damping_ = 1.0f;
         body_area_ = 1.0f;
         wing_area_ = 3.0f;
-        water_density_ = 1000F;
+        water_density_ = 1000.0f;
         cop_length_ = 0.25f;
-        desired_depth_ = 50F;
-        resurface_time_ = 20F;
+        dive_speed_ = -20;
+        float_speed_ = 30;
+        desired_depth_ = 50.0f;
+        resurface_time_ = 20.0f;
         surface_threshold_ = 0.5f;
         min_energy_ = 0.0f;
-        min_depth_ = 75F;
+        min_depth_ = -75.0f;
         max_depth_ = 0.0f;
     }
 
@@ -45,6 +47,8 @@ class SeaGliderModel : public Model {
 
         State next_state = state;
 
+        next_state[SG] += control[dSGdt] * time_span;
+
         const float vx = state[Vx];
         const float vy = state[Vy];
         const float theta = state[Q];
@@ -55,7 +59,7 @@ class SeaGliderModel : public Model {
 
         const float F_drag_wx = -0.5f*water_density_*body_area_*v2*drag_coefficient_(phi);
         const float F_lift_sy = 0.5f*water_density_*wing_area_*v2*lift_coefficient_(phi);
-        const float F_bouy_ny = mass_*gravity_*(state[SG] - 1);
+        const float F_bouy_ny = mass_*gravity_*(next_state[SG] - 1);
 
         const float F_drag_nx = F_drag_wx * cosf(theta_v);
         const float F_drag_ny = F_drag_wx * sinf(theta_v);
@@ -78,7 +82,6 @@ class SeaGliderModel : public Model {
         next_state[Vx] += Ax * time_span;
         next_state[Vy] += Ay * time_span;
         next_state[dQdt] += Mz * time_span;
-        next_state[SG] += control[dSGdt] * time_span;
 
         // TODO: State of Charge, PCM Temp
 
@@ -107,9 +110,26 @@ class SeaGliderModel : public Model {
             What is the lowest cost possible from this state to the goal?
         */
 
-        float diffY = state[Y] - desired_depth_;
+        const float Y0 = state[Y] - desired_depth_;
+        const float YS = -desired_depth_;
+        const float T = resurface_time_ - state[t];
 
-        return 0.0f;
+        if (T < 0)
+            return Y0; // TODO
+
+        const float t_intersect = ((YS - Y0) - float_speed_*T) / (dive_speed_ - float_speed_);
+        const float t_dive = -Y0 / dive_speed_;
+        const float t_float = -YS / float_speed_ + T;
+        
+        const float t_dive_int = t_dive < t_intersect ? t_dive : t_intersect;
+        const float t_float_int = t_float > t_intersect ? t_float : t_intersect;
+
+        const float A_dive = 0.5f*dive_speed_*t_dive_int*t_dive_int + Y0*t_dive_int;
+        const float A_float = -0.5f*float_speed_*T*T - 0.5f*float_speed_*t_float_int*t_float_int + float_speed_*T*t_float_int + YS*T - YS*t_float_int;
+
+        const float A = A_dive + A_float;
+
+        return A;
     }
 
     // Determine if node is valid
@@ -153,6 +173,8 @@ class SeaGliderModel : public Model {
     float wing_area_;
     float water_density_;
     float cop_length_;
+    float dive_speed_;
+    float float_speed_;
 
     // plan params
     float desired_depth_;
