@@ -19,6 +19,7 @@ class SeaGliderModel : public Model {
 
     // Constructor
     SeaGliderModel() {
+        integration_size_ = 5;
         gravity_ = 9.81f;
         mass_ = 10.0f;
         moment_ = 10.0f;
@@ -29,11 +30,11 @@ class SeaGliderModel : public Model {
         cop_length_ = 0.25f;
         dive_speed_ = -20;
         float_speed_ = 30;
-        desired_depth_ = 50.0f;
+        desired_depth_ = -10.0f;
         resurface_time_ = 20.0f;
-        surface_threshold_ = 0.5f;
+        surface_threshold_ = 0.1f;
         min_energy_ = 0.0f;
-        min_depth_ = -75.0f;
+        min_depth_ = -15.0f;
         max_depth_ = 0.0f;
     }
 
@@ -47,45 +48,47 @@ class SeaGliderModel : public Model {
 
         State next_state = state;
 
-        next_state[SG] += control[dSGdt] * time_span;
+        const float integration_time = time_span / integration_size_;
+        for (size_t i = 0; i < integration_size_; i++) {
 
-        const float vx = state[Vx];
-        const float vy = state[Vy];
-        const float theta = state[Q];
+            next_state[SG] += control[dSGdt] * integration_time;
 
-        const float v2 = vx*vx + vy*vy;
-        const float theta_v = atan2f(vy, vx);
-        const float phi = theta - theta_v;
+            const float vx = next_state[Vx];
+            const float vy = next_state[Vy];
+            const float theta = next_state[Q];
 
-        const float F_drag_wx = -0.5f*water_density_*body_area_*v2*drag_coefficient_(phi);
-        const float F_lift_sy = 0.5f*water_density_*wing_area_*v2*lift_coefficient_(phi);
-        const float F_bouy_ny = mass_*gravity_*(next_state[SG] - 1);
+            const float v2 = vx*vx + vy*vy;
+            const float theta_v = atan2f(vy, vx);
+            const float phi = theta - theta_v;
 
-        const float F_drag_nx = F_drag_wx * cosf(theta_v);
-        const float F_drag_ny = F_drag_wx * sinf(theta_v);
+            const float F_drag_wx = -0.5f*water_density_*body_area_*v2*drag_coefficient_(phi);
+            const float F_lift_sy = 0.5f*water_density_*wing_area_*v2*lift_coefficient_(phi);
+            const float F_bouy_ny = mass_*gravity_*(next_state[SG] - 1);
 
-        const float F_lift_nx = F_lift_sy * -sinf(theta);
-        const float F_lift_ny = F_lift_sy * cosf(theta);
+            const float F_drag_nx = F_drag_wx * cosf(theta_v);
+            const float F_drag_ny = F_drag_wx * sinf(theta_v);
 
-        const float cop_nx = cop_length_ * cosf(theta);
-        const float cop_ny = cop_length_ * sinf(theta);
+            const float F_lift_nx = F_lift_sy * -sinf(theta);
+            const float F_lift_ny = F_lift_sy * cosf(theta);
 
-        const float M_pres = cop_nx*F_drag_ny - cop_ny*F_drag_nx;
+            const float cop_nx = cop_length_ * cosf(theta);
+            const float cop_ny = cop_length_ * sinf(theta);
 
-        const float Ax = (F_drag_nx + F_lift_nx) / mass_;
-        const float Ay = (F_drag_ny + F_lift_ny + F_bouy_ny) / mass_;
-        const float Mz = (M_pres - rotational_damping_*state[dQdt]) / moment_;
+            const float M_pres = cop_nx*F_drag_ny - cop_ny*F_drag_nx;
 
-        next_state[X] += next_state[Vx] * time_span;
-        next_state[Y] += next_state[Vy] * time_span;
-        next_state[Q] += next_state[dQdt] * time_span;
-        next_state[Vx] += Ax * time_span;
-        next_state[Vy] += Ay * time_span;
-        next_state[dQdt] += Mz * time_span;
+            const float Ax = (F_drag_nx + F_lift_nx) / mass_;
+            const float Ay = (F_drag_ny + F_lift_ny + F_bouy_ny) / mass_;
+            const float Mz = (M_pres - rotational_damping_*next_state[dQdt]) / moment_;
 
-        // TODO: State of Charge, PCM Temp
-
-        next_state[t] += time_span;
+            next_state[X] += next_state[Vx] * integration_time;
+            next_state[Y] += next_state[Vy] * integration_time;
+            next_state[Q] += next_state[dQdt] * integration_time;
+            next_state[Vx] += Ax * integration_time;
+            next_state[Vy] += Ay * integration_time;
+            next_state[dQdt] += Mz * integration_time;
+            // TODO: State of Charge, PCM Temp
+            next_state[t] += integration_time;
+        }
 
         return next_state;
 
@@ -96,7 +99,7 @@ class SeaGliderModel : public Model {
 
         // Maximize time at desired depth
 
-        float diffY = std::abs(state[Y] - desired_depth_);
+        float diffY = std::abs(desired_depth_ - state[Y]);
 
         return diffY * time_span;
     }
@@ -163,6 +166,8 @@ class SeaGliderModel : public Model {
     virtual ~SeaGliderModel() {}
 
     protected:
+
+    size_t integration_size_;
 
     // glider params
     float gravity_;

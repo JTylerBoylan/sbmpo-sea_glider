@@ -24,9 +24,9 @@ xp = zeros(1, num_path);
 yp = zeros(1, num_path);
 
 for n = 1:num_path
-   t(n) = path.nodes(n).state(end);
-   x(n) = path.nodes(n).state(1);
-   y(n) = path.nodes(n).state(2); 
+   tp(n) = path.nodes(n).state(end);
+   xp(n) = path.nodes(n).state(1);
+   yp(n) = path.nodes(n).state(2); 
 end
 
 figure
