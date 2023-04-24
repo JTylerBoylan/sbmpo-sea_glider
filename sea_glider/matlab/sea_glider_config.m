@@ -8,8 +8,8 @@ close all
 runs = 1;
 
 params = struct;
-params.max_iterations = 100000;
-params.max_generations = 500;
+params.max_iterations = 25000;
+params.max_generations = 100;
 params.horizon_time = 0.5;
 params.num_states = 10;
 params.num_controls = 1;

@@ -20,22 +20,27 @@ class SeaGliderModel : public Model {
     // Constructor
     SeaGliderModel() {
         integration_size_ = 5;
-        gravity_ = 9.81f;
+
+        gravity_ = -9.81f;
         mass_ = 10.0f;
-        moment_ = 10.0f;
-        rotational_damping_ = 1.0f;
-        body_area_ = 1.0f;
-        wing_area_ = 3.0f;
+        moment_ = 5.0f;
+        rotational_damping_ = 10.0f;
+        body_area_ = 0.25f;
+        wing_area_ = 1.0f;
         water_density_ = 1000.0f;
-        cop_length_ = 0.25f;
-        dive_speed_ = -20;
-        float_speed_ = 30;
-        desired_depth_ = -10.0f;
-        resurface_time_ = 20.0f;
+        cop_length_ = -0.1f;
+
+        dive_speed_ = -1.0;
+        float_speed_ = 1.0;
+
+        desired_depth_ = -5.0f;
+        resurface_time_ = 10.0f;
         surface_threshold_ = 0.1f;
         min_energy_ = 0.0f;
         min_depth_ = -15.0f;
         max_depth_ = 0.0f;
+        min_specific_gravity_ = 0.45;
+        max_specific_gravity_ = 1.55;
     }
 
     // Evaluate a node with a control
@@ -147,6 +152,11 @@ class SeaGliderModel : public Model {
         if (state[Y] > max_depth_)
             return false;
 
+        if (state[SG] < min_specific_gravity_)
+            return false;
+        
+        if (state[SG] > max_specific_gravity_)
+            return false;
 
         return true;
     }
@@ -190,6 +200,8 @@ class SeaGliderModel : public Model {
     float min_energy_;
     float min_depth_;
     float max_depth_;
+    float min_specific_gravity_;
+    float max_specific_gravity_;
 
     float power_output_(const float pcm_temp, const float depth) {
 
