@@ -1,5 +1,5 @@
 
-L = 3;
+L = 1;
 glider = [-L/2 L/2; 0 0];
 
 fig = figure;

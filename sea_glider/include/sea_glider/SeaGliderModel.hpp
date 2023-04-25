@@ -19,13 +19,14 @@ class SeaGliderModel : public Model {
 
     // Constructor
     SeaGliderModel() {
-        integration_size_ = 5;
 
-        gravity_ = -9.81f;
-        mass_ = 10.0f;
-        moment_ = 5.0f;
-        rotational_damping_ = 10.0f;
-        body_area_ = 0.25f;
+        integration_size_ = 100;
+
+        gravity_ = 9.81f;
+        mass_ = 1.26f;
+        moment_ = 0.1f;
+        rotational_damping_ = 1.0f;
+        body_area_ = 0.5f;
         wing_area_ = 1.0f;
         water_density_ = 1000.0f;
         cop_length_ = -0.1f;
@@ -34,7 +35,6 @@ class SeaGliderModel : public Model {
         float_speed_ = 1.0;
 
         desired_depth_ = -5.0f;
-        resurface_time_ = 10.0f;
         surface_threshold_ = 0.1f;
         min_energy_ = 0.0f;
         min_depth_ = -15.0f;
@@ -67,19 +67,19 @@ class SeaGliderModel : public Model {
             const float phi = theta - theta_v;
 
             const float F_drag_wx = -0.5f*water_density_*body_area_*v2*drag_coefficient_(phi);
-            const float F_lift_sy = 0.5f*water_density_*wing_area_*v2*lift_coefficient_(phi);
-            const float F_bouy_ny = mass_*gravity_*(next_state[SG] - 1);
+            const float F_lift_wy = 0.5f*water_density_*wing_area_*v2*lift_coefficient_(phi);
+            const float F_bouy_ny = mass_*gravity_*(1.0f - next_state[SG]);
 
             const float F_drag_nx = F_drag_wx * cosf(theta_v);
             const float F_drag_ny = F_drag_wx * sinf(theta_v);
 
-            const float F_lift_nx = F_lift_sy * -sinf(theta);
-            const float F_lift_ny = F_lift_sy * cosf(theta);
+            const float F_lift_nx = F_lift_wy * -sinf(theta_v);
+            const float F_lift_ny = F_lift_wy * cosf(theta_v);
 
             const float cop_nx = cop_length_ * cosf(theta);
             const float cop_ny = cop_length_ * sinf(theta);
 
-            const float M_pres = cop_nx*F_drag_ny - cop_ny*F_drag_nx;
+            const float M_pres = cop_nx*(F_drag_ny + F_lift_ny) - cop_ny*(F_drag_nx + F_lift_nx);
 
             const float Ax = (F_drag_nx + F_lift_nx) / mass_;
             const float Ay = (F_drag_ny + F_lift_ny + F_bouy_ny) / mass_;
@@ -103,7 +103,6 @@ class SeaGliderModel : public Model {
     virtual float cost(const State& state, const Control& control, const float time_span) {
 
         // Maximize time at desired depth
-
         float diffY = std::abs(desired_depth_ - state[Y]);
 
         return diffY * time_span;
@@ -120,7 +119,7 @@ class SeaGliderModel : public Model {
 
         const float Y0 = state[Y] - desired_depth_;
         const float YS = -desired_depth_;
-        const float T = resurface_time_ - state[t];
+        const float T = goal[t] - state[t];
 
         if (T < 0)
             return Y0; // TODO
@@ -158,6 +157,9 @@ class SeaGliderModel : public Model {
         if (state[SG] > max_specific_gravity_)
             return false;
 
+        if (state[Q] > M_PI_2f || state[Q] < -M_PI_2f)
+            return false;
+
         return true;
     }
 
@@ -165,8 +167,7 @@ class SeaGliderModel : public Model {
     virtual bool is_goal(const State& state, const State& goal) {
 
         // Plan ends after resurface time reached and the glider is at the surface
-
-        if (state[t] > resurface_time_ && state[Y] > surface_threshold_)
+        if (state[t] > goal[t] && state[Y] > surface_threshold_)
             return true;
 
         return false;
@@ -177,31 +178,46 @@ class SeaGliderModel : public Model {
 
     protected:
 
+    // Parameters
+
     size_t integration_size_;
 
-    // glider params
     float gravity_;
     float mass_;
     float moment_;
     float rotational_damping_;
+
     float body_area_;
     float wing_area_;
+
     float water_density_;
     float cop_length_;
+
     float dive_speed_;
     float float_speed_;
 
-    // plan params
-    float desired_depth_;
-    float resurface_time_;
-
-    // constraints
-    float surface_threshold_;
-    float min_energy_;
     float min_depth_;
     float max_depth_;
+    float desired_depth_;
+    float surface_threshold_;
+
+    float min_energy_;
+
     float min_specific_gravity_;
     float max_specific_gravity_;
+
+    // Private Functions
+
+    float drag_coefficient_(const float phi) {
+        const float CD0 = 0.001f;
+        const float CD2 = 0.01f;
+        return CD0 + CD2*phi*phi;
+    }
+
+    float lift_coefficient_(const float phi) {
+        const float CL1 = 1.0f;
+        return CL1*phi;
+    }
 
     float power_output_(const float pcm_temp, const float depth) {
 
@@ -219,17 +235,6 @@ class SeaGliderModel : public Model {
         // Water temp
 
         return 0.0f;
-    }
-
-    float drag_coefficient_(const float phi) {
-        const float CD0 = 0.01;
-        const float KD = 0.05;
-        return CD0 + std::abs(KD*sinf(phi));
-    }
-
-    float lift_coefficient_(const float phi) {
-        const float KL = 0.25;
-        return KL*sinf(2*phi);
     }
 
 

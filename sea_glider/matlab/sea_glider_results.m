@@ -32,4 +32,4 @@ end
 figure
 hold on
 plot(x,y,'xr');
-plot(xp, yp, '-b');
+plot(xp, yp, '-b', 'LineWidth', 5);

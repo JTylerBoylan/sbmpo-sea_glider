@@ -78,28 +78,28 @@ function SG = specific_gravity(t)
     %f = 10;
     %SG = 1 + 0.995*sin(2*pi*t/f);
     
-    SG = 1.5;
+    SG = 1.25;
 end
 
 function CD = drag_coefficient(phi)
     CD0 = 0.01;
-    KD = 0.05;
-    CD = CD0 + abs(KD*sin(phi));
+    CD2 = 0.1;
+    CD = CD0 + CD2*phi^2;
 end
 
 function CL = lift_coefficient(phi)
-    KL = 0.25;
-    CL = KL*sin(2*phi);
+    CL1 = 1.0;
+    CL = CL1*phi;
 end
 
 function dq = gliderODE(t, q)
 
     gravity = -9.81; % m/s^2
-    mass = 10; % kg
-    moment = 5; % kg*m^2
-    rotational_damping = 10; % kg*m/s
-    body_area = 0.25; % m^2
-    wing_area = 1.0; % m^2
+    mass = 1.26; % kg
+    moment = 0.5; % kg*m^2
+    rotational_damping = 5.0; % kg*m/s
+    body_area = 0.51; % m^2
+    wing_area = 2.0; % m^2
     water_density = 1000; % kg/m^3
     cop_length = -0.1; % m
     
@@ -118,15 +118,15 @@ function dq = gliderODE(t, q)
     n_R_w = [cos(theta_v) -sin(theta_v); sin(theta_v) cos(theta_v)];
 
     w_drag_force = [-0.5*water_density*body_area*v^2*drag_coefficient(phi); 0];
-    s_lift_force = [0; 0.5*water_density*wing_area*v^2*lift_coefficient(phi)];
+    w_lift_force = [0; 0.5*water_density*wing_area*v^2*lift_coefficient(phi)];
     n_bouy_force = [0; mass*gravity*(specific_gravity(t) - 1)];
     
     n_drag_force = n_R_w * w_drag_force;
-    n_lift_force = n_R_s * s_lift_force;
+    n_lift_force = n_R_w * w_lift_force;
     
     s_cop = [cop_length; 0];
     n_cop = n_R_s * s_cop;
-    pressure_moment = det([n_cop, n_drag_force]);
+    pressure_moment = det([n_cop, n_lift_force + n_drag_force]);
     
     dq = [...
          vx;
