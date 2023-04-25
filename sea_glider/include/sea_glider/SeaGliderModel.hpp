@@ -37,19 +37,18 @@ class SeaGliderModel : public Model {
         desired_depth_ = -5.0f;
         surface_threshold_ = 0.1f;
         min_energy_ = 0.0f;
-        min_depth_ = -15.0f;
+        min_depth_ = -7.5f;
         max_depth_ = 0.0f;
         min_specific_gravity_ = 0.45;
         max_specific_gravity_ = 1.55;
+
+        max_time_ = 40;
     }
 
     // Evaluate a node with a control
     virtual State next_state(const State &state, const Control& control, const float time_span) {
 
-        /*
-            Dynamics of the system
-            How does each state change with respect to the controls?
-        */
+        // Glider dynamics
 
         State next_state = state;
 
@@ -111,18 +110,16 @@ class SeaGliderModel : public Model {
     // Get the heuristic of a state
     virtual float heuristic(const State& state, const State& goal) {
 
-        /*
-            Heuristic of a state with respect to the goal
-            Leads the planner to the goal
-            What is the lowest cost possible from this state to the goal?
-        */
+        // Optimistic best cost to goal
 
-        const float Y0 = state[Y] - desired_depth_;
+        const float Y0 = std::abs(state[Y] - desired_depth_);
         const float YS = -desired_depth_;
-        const float T = goal[t] - state[t];
 
-        if (T < 0)
-            return Y0; // TODO
+        const float T = goal[t] - state[t];
+        const float TS = (YS - Y0) / float_speed_;
+
+        if (T < TS)
+            return TS*(YS - Y0);
 
         const float t_intersect = ((YS - Y0) - float_speed_*T) / (dive_speed_ - float_speed_);
         const float t_dive = -Y0 / dive_speed_;
@@ -142,13 +139,13 @@ class SeaGliderModel : public Model {
     // Determine if node is valid
     virtual bool is_valid(const State& state) {
 
-        if (state[SoC] < min_energy_)
-            return false;
-
         if (state[Y] < min_depth_)
             return false;
         
         if (state[Y] > max_depth_)
+            return false;
+
+        if (state[SoC] < min_energy_)
             return false;
 
         if (state[SG] < min_specific_gravity_)
@@ -160,6 +157,9 @@ class SeaGliderModel : public Model {
         if (state[Q] > M_PI_2f || state[Q] < -M_PI_2f)
             return false;
 
+        if (state[t] > max_time_)
+            return false;
+
         return true;
     }
 
@@ -167,7 +167,7 @@ class SeaGliderModel : public Model {
     virtual bool is_goal(const State& state, const State& goal) {
 
         // Plan ends after resurface time reached and the glider is at the surface
-        if (state[t] > goal[t] && state[Y] > surface_threshold_)
+        if (state[t] > goal[t] && state[Y] > -surface_threshold_)
             return true;
 
         return false;
@@ -206,16 +206,18 @@ class SeaGliderModel : public Model {
     float min_specific_gravity_;
     float max_specific_gravity_;
 
+    float max_time_;
+
     // Private Functions
 
     float drag_coefficient_(const float phi) {
-        const float CD0 = 0.001f;
-        const float CD2 = 0.01f;
+        const float CD0 = 0.0001f;
+        const float CD2 = 0.001f;
         return CD0 + CD2*phi*phi;
     }
 
     float lift_coefficient_(const float phi) {
-        const float CL1 = 1.0f;
+        const float CL1 = 0.25f;
         return CL1*phi;
     }
 
