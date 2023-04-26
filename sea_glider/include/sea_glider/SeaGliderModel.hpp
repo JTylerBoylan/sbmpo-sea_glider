@@ -104,7 +104,7 @@ class SeaGliderModel : public Model {
         // Maximize time at desired depth
         float diffY = std::abs(desired_depth_ - state[Y]);
 
-        return diffY * time_span;
+        return diffY * time_span + control[0]*control[0];
     }
 
     // Get the heuristic of a state
