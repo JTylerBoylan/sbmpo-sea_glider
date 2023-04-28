@@ -92,6 +92,7 @@ class SeaGliderModel : public Model {
             next_state[dQdt] += Mz * integration_time;
             // TODO: State of Charge, PCM Temp
             next_state[t] += integration_time;
+
         }
 
         return next_state;
@@ -104,7 +105,7 @@ class SeaGliderModel : public Model {
         // Maximize time at desired depth
         float diffY = std::abs(desired_depth_ - state[Y]);
 
-        return diffY * time_span + control[0]*control[0];
+        return diffY*time_span + 5.0f*control[0]*control[0];
     }
 
     // Get the heuristic of a state
@@ -118,13 +119,13 @@ class SeaGliderModel : public Model {
         const float T = goal[t] - state[t];
         const float TS = (YS - Y0) / float_speed_;
 
-        if (T < TS)
-            return TS*(YS - Y0);
-
         const float t_intersect = ((YS - Y0) - float_speed_*T) / (dive_speed_ - float_speed_);
         const float t_dive = -Y0 / dive_speed_;
         const float t_float = -YS / float_speed_ + T;
         
+        if (t_float < 0.0f)
+            return 0.5f*TS*(YS - Y0);
+
         const float t_dive_int = t_dive < t_intersect ? t_dive : t_intersect;
         const float t_float_int = t_float > t_intersect ? t_float : t_intersect;
 
