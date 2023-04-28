@@ -112,7 +112,7 @@ class SeaGliderModel : public Model {
 
         // Optimistic best cost to goal
 
-        const float Y0 = std::abs(state[Y] - desired_depth_);
+        const float Y0 = state[Y] - desired_depth_;
         const float YS = -desired_depth_;
 
         const float T = goal[t] - state[t];
