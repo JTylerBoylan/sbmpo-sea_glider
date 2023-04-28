@@ -29,6 +29,10 @@ for n = 1:num_path
    yp(n) = path.nodes(n).state(2); 
 end
 
+x(y < -100) = 0;
+y(y < -100) = 0;
+t(y < -100) = 0;
+
 figure
 hold on
 plot(x,y,'xr');

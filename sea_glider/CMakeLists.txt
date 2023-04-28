@@ -8,4 +8,4 @@ include_directories(include)
 # Add the executable
 add_executable(glider_sbmpo src/main.cpp)
 target_include_directories(glider_sbmpo PUBLIC include)
-target_link_libraries(glider_sbmpo PUBLIC sbmpo sbmpo_models sbmpo_benchmarking stdc++ stdc++fs m)
+target_link_libraries(glider_sbmpo PUBLIC sbmpo stdc++ stdc++fs m)

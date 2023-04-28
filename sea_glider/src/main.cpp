@@ -1,8 +1,7 @@
 #include <sea_glider/SeaGliderModel.hpp>
-#include <sbmpo_benchmarking/benchmark.hpp>
+#include <sbmpo/tools/benchmark.hpp>
 
 using namespace sbmpo;
-using namespace sbmpo_benchmarking;
 using namespace sea_glider;
 
 int main (int argc, char ** argv) {
