@@ -31,18 +31,22 @@ class SeaGliderModel : public Model {
         water_density_ = 1000.0f;
         cop_length_ = -0.1f;
 
-        dive_speed_ = -1.0;
-        float_speed_ = 1.0;
+        dive_speed_ = -0.03;
+        surface_speed_ = 0.03;
 
-        desired_depth_ = -5.0f;
+        desired_depth_ = -1.0f;
         surface_threshold_ = 0.1f;
-        min_energy_ = 0.0f;
-        min_depth_ = -7.5f;
+        min_energy_ = -10000.0f;
+        min_depth_ = -3.0f;
         max_depth_ = 0.0f;
-        min_specific_gravity_ = 0.45;
-        max_specific_gravity_ = 1.55;
+        min_specific_gravity_ = 0.988;
+        max_specific_gravity_ = 1.012;
 
-        max_time_ = 40;
+        P_electronics_ = 0.265f;
+        P_friction_ = 2.28f;
+        p_control_ = 0.06481f;
+
+        max_time_ = 200;
     }
 
     // Evaluate a node with a control
@@ -63,10 +67,10 @@ class SeaGliderModel : public Model {
 
             const float v2 = vx*vx + vy*vy;
             const float theta_v = atan2f(vy, vx);
-            const float phi = theta - theta_v;
+            const float alpha = theta - theta_v;
 
-            const float F_drag_wx = -0.5f*water_density_*body_area_*v2*drag_coefficient_(phi);
-            const float F_lift_wy = 0.5f*water_density_*wing_area_*v2*lift_coefficient_(phi);
+            const float F_drag_wx = -0.5f*water_density_*body_area_*v2*drag_coefficient_(alpha);
+            const float F_lift_wy = 0.5f*water_density_*wing_area_*v2*lift_coefficient_(alpha);
             const float F_bouy_ny = mass_*gravity_*(1.0f - next_state[SG]);
 
             const float F_drag_nx = F_drag_wx * cosf(theta_v);
@@ -84,12 +88,16 @@ class SeaGliderModel : public Model {
             const float Ay = (F_drag_ny + F_lift_ny + F_bouy_ny) / mass_;
             const float Mz = (M_pres - rotational_damping_*next_state[dQdt]) / moment_;
 
+            const float power_depth_ = control[dSGdt] < 0.0f ? p_control_ : 0.0f;
+            const float power_nom_ = control[dSGdt] == 0.0f ? P_friction_ + P_electronics_ : P_electronics_;
+
             next_state[X] += next_state[Vx] * integration_time;
             next_state[Y] += next_state[Vy] * integration_time;
             next_state[Q] += next_state[dQdt] * integration_time;
             next_state[Vx] += Ax * integration_time;
             next_state[Vy] += Ay * integration_time;
             next_state[dQdt] += Mz * integration_time;
+            next_state[SoC] += (-power_depth_*state[Y] + power_nom_)*integration_time;
             // TODO: State of Charge, PCM Temp
             next_state[t] += integration_time;
 
@@ -105,36 +113,32 @@ class SeaGliderModel : public Model {
         // Maximize time at desired depth
         float diffY = std::abs(desired_depth_ - state[Y]);
 
-        return diffY*time_span + 5.0f*control[0]*control[0];
+        return diffY*time_span; // + 5.0f*control[0]*control[0];
     }
 
     // Get the heuristic of a state
     virtual float heuristic(const State& state, const State& goal) {
 
-        // Optimistic best cost to goal
-
+        // Transforms
         const float Y0 = state[Y] - desired_depth_;
         const float YS = -desired_depth_;
-
-        const float T = goal[t] - state[t];
-        const float TS = (YS - Y0) / float_speed_;
-
-        const float t_intersect = ((YS - Y0) - float_speed_*T) / (dive_speed_ - float_speed_);
-        const float t_dive = -Y0 / dive_speed_;
-        const float t_float = -YS / float_speed_ + T;
         
-        if (t_float < 0.0f)
-            return 0.5f*TS*(YS - Y0);
+        const float T = goal[t] - state[t];
 
-        const float t_dive_int = t_dive < t_intersect ? t_dive : t_intersect;
-        const float t_float_int = t_float > t_intersect ? t_float : t_intersect;
+        if (YS - Y0 > surface_speed_*T) {
+            // CASE 4
+            return 0.5f * (YS*YS - Y0*Y0) / surface_speed_;
+        } else if (Y0 < 0) {
+            // CASE 3
+            return 0.5f * (YS*YS + Y0*Y0) / surface_speed_;
+        } else if (YS/surface_speed_ - Y0/dive_speed_ <= T) {
+            // CASE 1
+            return 0.5f * (YS*YS/surface_speed_ - Y0*Y0/dive_speed_);
+        } else {
+            // CASE 2
+            return 0.5f * ((T + 2.0f*surface_speed_*Y0 - 2.0f*dive_speed_*YS)*T + (YS-Y0)*(YS-Y0)) / (surface_speed_ - dive_speed_);
+        }
 
-        const float A_dive = 0.5f*dive_speed_*t_dive_int*t_dive_int + Y0*t_dive_int;
-        const float A_float = -0.5f*float_speed_*T*T - 0.5f*float_speed_*t_float_int*t_float_int + float_speed_*T*t_float_int + YS*T - YS*t_float_int;
-
-        const float A = A_dive + A_float;
-
-        return A;
     }
 
     // Determine if node is valid
@@ -195,7 +199,7 @@ class SeaGliderModel : public Model {
     float cop_length_;
 
     float dive_speed_;
-    float float_speed_;
+    float surface_speed_;
 
     float min_depth_;
     float max_depth_;
@@ -209,17 +213,21 @@ class SeaGliderModel : public Model {
 
     float max_time_;
 
+    float P_friction_;
+    float P_electronics_;
+    float p_control_;
+
     // Private Functions
 
-    float drag_coefficient_(const float phi) {
-        const float CD0 = 0.0001f;
-        const float CD2 = 0.001f;
-        return CD0 + CD2*phi*phi;
+    float drag_coefficient_(const float alpha) {
+        const float CD0 = 0.1185f;
+        const float CD2 = 0.001614f;
+        return CD0 + CD2*alpha*alpha;
     }
 
-    float lift_coefficient_(const float phi) {
-        const float CL1 = 0.25f;
-        return CL1*phi;
+    float lift_coefficient_(const float alpha) {
+        const float CL1 = 0.1066f;
+        return CL1*alpha;
     }
 
     float power_output_(const float pcm_temp, const float depth) {

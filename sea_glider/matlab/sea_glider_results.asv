@@ -30,10 +30,10 @@ for n = 1:num_path
 end
 
 ms = 0.03;
-md = -0.03;
+md = -0.01;
 ys = 1.0;
 y0 = y + 1.0;
-T = 180 - t;
+T = 30 - t;
 
 case4 = ys - y0 > ms*T;
 case3 = ~case4 & y0 < 0;
