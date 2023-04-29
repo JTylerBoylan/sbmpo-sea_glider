@@ -44,7 +44,21 @@ A_3 = simplify(A1_3 + A2_3)
 
 %% case 4
 
-ts = (ys-y0)/ms;
+ts_4 = (ys-y0)/ms;
 
-A_4 = 1/2*ms*ts^2 + y0*ts;
+A_4 = 1/2*ms*ts_4^2 + y0*ts_4;
 A_4 = simplify(A_4)
+
+%% case 5
+
+ti_5 = -y0/ms;
+ts_5 = (ys-y0)/ms;
+
+A1_5 = -1/2*ms*ti_5^2 - y0*ti_5;
+A1_5 = simplify(A1_5);
+
+A2_5 = 1/2*ms*(ts_5^2-ti_5^2) + y0*(ts_5-ti_5);
+A2_5 = simplify(A2_5)
+
+A_5 = simplify(A1_5 + A2_5)
+

@@ -97,8 +97,8 @@ class SeaGliderModel : public Model {
             next_state[Vx] += Ax * integration_time;
             next_state[Vy] += Ay * integration_time;
             next_state[dQdt] += Mz * integration_time;
-            next_state[SoC] += (-power_depth_*state[Y] + power_nom_)*integration_time;
-            // TODO: State of Charge, PCM Temp
+            next_state[SoC] += (power_depth_*-state[Y] + power_nom_)*integration_time;
+            // TODO: PCM Temp
             next_state[t] += integration_time;
 
         }
@@ -122,21 +122,30 @@ class SeaGliderModel : public Model {
         // Transforms
         const float Y0 = state[Y] - desired_depth_;
         const float YS = -desired_depth_;
-        
         const float T = goal[t] - state[t];
 
+        // Cases
         if (YS - Y0 > surface_speed_*T) {
-            // CASE 4
-            return 0.5f * (YS*YS - Y0*Y0) / surface_speed_;
-        } else if (Y0 < 0) {
-            // CASE 3
-            return 0.5f * (YS*YS + Y0*Y0) / surface_speed_;
-        } else if (YS/surface_speed_ - Y0/dive_speed_ <= T) {
-            // CASE 1
-            return 0.5f * (YS*YS/surface_speed_ - Y0*Y0/dive_speed_);
+            if (Y0 < 0) {
+                // CASE 5
+                return 0.5f * (YS*YS + Y0*Y0) / surface_speed_;
+            } else {
+                // CASE 4
+                return 0.5f * (YS*YS - Y0*Y0) / surface_speed_;
+            }
         } else {
-            // CASE 2
-            return 0.5f * ((T + 2.0f*surface_speed_*Y0 - 2.0f*dive_speed_*YS)*T + (YS-Y0)*(YS-Y0)) / (surface_speed_ - dive_speed_);
+            if (Y0 < 0) {
+                // CASE 3
+                return 0.5f * (YS*YS + Y0*Y0) / surface_speed_;
+            } else {
+                if (YS/surface_speed_ - Y0/dive_speed_ > T) {
+                    // CASE 2
+                    return 0.5f * ((T + 2.0f*surface_speed_*Y0 - 2.0f*dive_speed_*YS)*T + (YS-Y0)*(YS-Y0)) / (surface_speed_ - dive_speed_);
+                } else {
+                    // CASE 1
+                    return 0.5f * (YS*YS/surface_speed_ - Y0*Y0/dive_speed_);
+                }
+            }
         }
 
     }
@@ -237,13 +246,15 @@ class SeaGliderModel : public Model {
         float diffT = pcm_temp - water_temp;
 
         // Power output
+        // TODO
 
-        return 0.0f;
+        return diffT;
     }
 
     float water_temperature_(const float depth) {
 
         // Water temp
+        // TODO
 
         return 0.0f;
     }

@@ -35,10 +35,15 @@ ys = 1.0;
 y0 = y + 1.0;
 T = 180 - t;
 
-case4 = ys - y0 > ms*T;
-case3 = ~case4 & y0 < 0;
-case2 = ~case4 & ~case3 & (ys/ms - y0/md) <= T;
-case1 = ~case4 & ~case3 & ~case2;
+test1 = ys - y0 > ms*T;
+test2 = y0 < 0;
+test3 = (ys/ms - y0/md) > T;
+
+case1 = ~test1 & ~test2 & ~test3;
+case2 = ~test1 & ~test2 & test3;
+case3 = ~test1 & test2;
+case4 = test1 & ~test2;
+case5 = test1 & test2;
 
 figure
 hold on
@@ -46,6 +51,7 @@ plot(x(case1),y(case1),'xr');
 plot(x(case2),y(case2),'xb');
 plot(x(case3),y(case3),'xg');
 plot(x(case4),y(case4),'xy');
+plot(x(case5),y(case5),'xc');
 plot(xp, yp, '-b', 'LineWidth', 5);
 title("Y vs X")
 
@@ -55,5 +61,6 @@ plot(t(case1),y(case1),'xr');
 plot(t(case2),y(case2),'xb');
 plot(t(case3),y(case3),'xg');
 plot(t(case4),y(case4),'xy');
+plot(t(case5),y(case5),'xc');
 plot(tp,yp,'-b','LineWidth',5);
 title("Y vs Time")
