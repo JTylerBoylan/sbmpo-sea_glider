@@ -20,19 +20,19 @@ class SeaGliderModel : public Model {
     // Constructor
     SeaGliderModel() {
 
-        integration_size_ = 100;
+        integration_size_ = 50;
 
         gravity_ = 9.81f;
         mass_ = 1.26f;
         moment_ = 0.1f;
         rotational_damping_ = 0.25f;
-        body_area_ = 0.5f;
-        wing_area_ = 1.0f;
+        body_area_ = 0.0038f;
+        wing_area_ = 0.0014f;
         water_density_ = 1000.0f;
         cop_length_ = -0.1f;
 
-        dive_speed_ = -0.155; //-0.03;
-        surface_speed_ = 0.145; // 0.03;
+        dive_speed_ = -1.5; //-0.03;
+        surface_speed_ = 1.5; // 0.03;
 
         desired_depth_ = -8.0; // -1.0f;
         surface_threshold_ = 0.1f;
@@ -42,11 +42,11 @@ class SeaGliderModel : public Model {
         min_specific_gravity_ = 0.952; // 0.988;
         max_specific_gravity_ = 1.048; // 1.012;
 
-        max_time_ = 250;
+        max_time_ = 60;
 
         P_electronics_ = 0.265f;
         P_friction_ = 2.28f;
-        p_control_ = 0.06481f;
+        p_control_ = 0.12962f;
 
     }
 
@@ -72,7 +72,7 @@ class SeaGliderModel : public Model {
 
             const float F_drag_wx = -0.5f*water_density_*body_area_*v2*drag_coefficient_(alpha);
             const float F_lift_wy = 0.5f*water_density_*wing_area_*v2*lift_coefficient_(alpha);
-            const float F_bouy_ny = mass_*gravity_*(1.0f - next_state[SG]);
+            const float F_bouy_ny = mass_*gravity_*(1.0f/next_state[SG] - 1);
 
             const float F_drag_nx = F_drag_wx * cosf(theta_v);
             const float F_drag_ny = F_drag_wx * sinf(theta_v);
@@ -130,10 +130,10 @@ class SeaGliderModel : public Model {
         if (YS - Y0 > surface_speed_*T) {
             if (Y0 < 0) {
                 // CASE 5
-                return (YS*YS + Y0*Y0) / surface_speed_;
+                return (YS*YS + Y0*Y0) / surface_speed_ + (YS*YS - Y0*YS)/surface_speed_ - YS*T;;
             } else {
                 // CASE 4
-                return (YS*YS - Y0*Y0) / surface_speed_;
+                return (YS*YS - Y0*Y0) / surface_speed_ + (YS*YS - Y0*YS)/surface_speed_ - YS*T;
             }
         } else {
             if (Y0 < 0) {
@@ -142,7 +142,7 @@ class SeaGliderModel : public Model {
             } else {
                 if (YS/surface_speed_ - Y0/dive_speed_ > T) {
                     // CASE 2
-                    return 0.5f * ((T + 2.0f*surface_speed_*Y0 - 2.0f*dive_speed_*YS)*T + (YS-Y0)*(YS-Y0)) / (surface_speed_ - dive_speed_);
+                    return 0.5f * ((dive_speed_*surface_speed_*T + 2.0f*surface_speed_*Y0 - 2.0f*dive_speed_*YS)*T + (YS-Y0)*(YS-Y0)) / (surface_speed_ - dive_speed_);
                 } else {
                     // CASE 1
                     return 0.5f * (YS*YS/surface_speed_ - Y0*Y0/dive_speed_);
@@ -176,12 +176,12 @@ class SeaGliderModel : public Model {
         if (state[t] > max_time_)
             return false;
 
-        const float Y0 = state[Y] - desired_depth_;
+        /*const float Y0 = state[Y] - desired_depth_;
         const float YS = -desired_depth_;
-        const float T = 240.0f - state[t];
+        const float T = 90.0f - state[t];
         if (YS - Y0 > surface_speed_*T)
             return false;
-        
+        */
 
         return true;
     }
@@ -190,7 +190,7 @@ class SeaGliderModel : public Model {
     virtual bool is_goal(const State& state, const State& goal) {
 
         // Plan ends after resurface time reached and the glider is at the surface
-        if (state[t] + 1.5 >= goal[t] && state[Y] >= -surface_threshold_)
+        if (state[t] + 0.5 >= goal[t] && state[Y] >= -surface_threshold_)
             return true;
 
         return false;
