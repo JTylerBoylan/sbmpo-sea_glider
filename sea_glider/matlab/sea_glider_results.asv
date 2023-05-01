@@ -13,15 +13,13 @@ num_nodes = length(nodes.nodes);
 t = zeros(1, num_nodes);
 x = zeros(1, num_nodes);
 y = zeros(1, num_nodes);
-g = zeros(1, num_nodes);
-f = zeros(1, num_nodes);
+h = z
+f
 
 for n = 1:num_nodes
    t(n) = nodes.nodes(n).state(end);
    x(n) = nodes.nodes(n).state(1);
    y(n) = nodes.nodes(n).state(2); 
-   g(n) = nodes.nodes(n).g;
-   f(n) = nodes.nodes(n).f;
 end
 
 num_path = length(path.nodes);
@@ -36,8 +34,8 @@ for n = 1:num_path
 end
 
 yd = -8.0;
-ms = 0.145;
-md = -0.155;
+ms = 0.075;
+md = -0.15;
 Tg = 240;
 
 ys = -yd;
@@ -72,4 +70,11 @@ plot(t(case3),y(case3),'xg');
 plot(t(case4),y(case4),'xy');
 plot(t(case5),y(case5),'xc');
 plot(tp,yp,'-k','LineWidth',5);
-title("Y vs Time")  
+title("Y vs Time")
+
+figure
+hold on
+for smp = 1:length(t)
+    ts = t(smp);
+    ys = y(smp);
+end

@@ -25,28 +25,29 @@ class SeaGliderModel : public Model {
         gravity_ = 9.81f;
         mass_ = 1.26f;
         moment_ = 0.1f;
-        rotational_damping_ = 1.0f;
+        rotational_damping_ = 0.25f;
         body_area_ = 0.5f;
         wing_area_ = 1.0f;
         water_density_ = 1000.0f;
         cop_length_ = -0.1f;
 
-        dive_speed_ = -0.03;
-        surface_speed_ = 0.03;
+        dive_speed_ = -0.155; //-0.03;
+        surface_speed_ = 0.145; // 0.03;
 
-        desired_depth_ = -1.0f;
+        desired_depth_ = -8.0; // -1.0f;
         surface_threshold_ = 0.1f;
-        min_energy_ = -10000.0f;
-        min_depth_ = -3.0f;
+        min_energy_ = -std::numeric_limits<float>::infinity();
+        min_depth_ = -10.0f; // -3.0f;
         max_depth_ = 0.0f;
-        min_specific_gravity_ = 0.988;
-        max_specific_gravity_ = 1.012;
+        min_specific_gravity_ = 0.952; // 0.988;
+        max_specific_gravity_ = 1.048; // 1.012;
+
+        max_time_ = 250;
 
         P_electronics_ = 0.265f;
         P_friction_ = 2.28f;
         p_control_ = 0.06481f;
 
-        max_time_ = 200;
     }
 
     // Evaluate a node with a control
@@ -99,9 +100,10 @@ class SeaGliderModel : public Model {
             next_state[dQdt] += Mz * integration_time;
             next_state[SoC] += (power_depth_*-state[Y] + power_nom_)*integration_time;
             // TODO: PCM Temp
-            next_state[t] += integration_time;
 
         }
+
+        next_state[t] += time_span;
 
         return next_state;
 
@@ -128,10 +130,10 @@ class SeaGliderModel : public Model {
         if (YS - Y0 > surface_speed_*T) {
             if (Y0 < 0) {
                 // CASE 5
-                return 0.5f * (YS*YS + Y0*Y0) / surface_speed_;
+                return (YS*YS + Y0*Y0) / surface_speed_;
             } else {
                 // CASE 4
-                return 0.5f * (YS*YS - Y0*Y0) / surface_speed_;
+                return (YS*YS - Y0*Y0) / surface_speed_;
             }
         } else {
             if (Y0 < 0) {
@@ -174,6 +176,13 @@ class SeaGliderModel : public Model {
         if (state[t] > max_time_)
             return false;
 
+        const float Y0 = state[Y] - desired_depth_;
+        const float YS = -desired_depth_;
+        const float T = 240.0f - state[t];
+        if (YS - Y0 > surface_speed_*T)
+            return false;
+        
+
         return true;
     }
 
@@ -181,7 +190,7 @@ class SeaGliderModel : public Model {
     virtual bool is_goal(const State& state, const State& goal) {
 
         // Plan ends after resurface time reached and the glider is at the surface
-        if (state[t] > goal[t] && state[Y] > -surface_threshold_)
+        if (state[t] + 1.5 >= goal[t] && state[Y] >= -surface_threshold_)
             return true;
 
         return false;
@@ -214,13 +223,12 @@ class SeaGliderModel : public Model {
     float max_depth_;
     float desired_depth_;
     float surface_threshold_;
+    float max_time_;
 
     float min_energy_;
 
     float min_specific_gravity_;
     float max_specific_gravity_;
-
-    float max_time_;
 
     float P_friction_;
     float P_electronics_;
